@@ -24,9 +24,15 @@
 #   go-tests = true
 #   unused-packages = true
 
-[[constraint]]
+[[override]]
   name = "github.com/pilosa/go-pilosa"
-  branch = "master"
+  source = "github.com/yuce/go-pilosa"
+  branch = "205-noStandardView"
+
+[[constraint]]
+  name = "github.com/pilosa/pdk"
+  source = "github.com/jaffee/pdk"
+  branch = "taxi-user2"
 
 [prune]
   go-tests = true
