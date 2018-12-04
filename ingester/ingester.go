@@ -13,10 +13,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	parseConcurrency = 8 //default goroutines for parsing
-)
-
 //indexes of fields in the log
 var logFields = map[string]int{
 	"ts":          0,
@@ -33,7 +29,7 @@ type Ingester struct {
 	index            *indexer.Indexer
 }
 
-func NewIngester(sourceCh chan string, index *indexer.Indexer, translator *translator.IndexTranslator, stopSig chan struct{}) *Ingester {
+func NewIngester(sourceCh chan string, index *indexer.Indexer, translator *translator.IndexTranslator, stopSig chan struct{}, parseConc int) *Ingester {
 	//source for Pilosa ingester
 	src := &source{sourceCh, stopSig}
 	var mp mapperAndPusher
@@ -41,7 +37,7 @@ func NewIngester(sourceCh chan string, index *indexer.Indexer, translator *trans
 	mp.translator = translator
 
 	return &Ingester{
-		parseConcurrency: parseConcurrency,
+		parseConcurrency: parseConc,
 		src:              src,
 		mp:               mp,
 		index:            index,

@@ -19,6 +19,7 @@ type Config struct {
 	System           System                         `toml:"system"`
 	Postgres         filemarker.PostgresConfig      `toml:"postgres"`
 	IngestCluster    clustering.IngestClusterConfig `toml:"ingest_cluster"`
+	ParseConcurrency int                            `toml:"parse_concurrency"`
 }
 
 type System struct {
@@ -27,7 +28,12 @@ type System struct {
 }
 
 func parseConfig(file string) (*Config, error) {
-	conf := &Config{}
+	conf := &Config{
+		Scanner: scanner.Config{
+			FileLoadParallelism: 3,
+		},
+		ParseConcurrency: 8,
+	}
 	_, err := toml.DecodeFile(file, conf)
 	if err != nil {
 		return nil, err

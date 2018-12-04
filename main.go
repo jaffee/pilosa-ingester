@@ -100,7 +100,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		ingester := ingester.NewIngester(linesCh, indexer, t, stopSignal)
+		ingester := ingester.NewIngester(linesCh, indexer, t, stopSignal, config.ParseConcurrency)
 
 		//////////////////////////////////////////
 		//start ingesting data

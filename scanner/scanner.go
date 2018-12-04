@@ -20,19 +20,19 @@ type Scanner struct {
 	config              *Config
 	logStorage          *logstorage.LogStorage
 	marker              *filemarker.FileStateMarker
-	parallelBuckets     int
 	filesCh             chan logstorage.AwsFile
 	fileLoadParallelism int
 	ingestCluster       *clustering.IngestClusterConfig
 }
 
 type Config struct {
-	MaxResults      int    `toml:"max_results"`
-	StartDate       string `toml:"start_date"`
-	EndDate         string `toml:"end_date"`
-	ParallelBuckets int    `toml:"parallel_buckets"`
-	BucketMin       int    `toml:"bucket_min"`
-	BucketMax       int    `toml:"bucket_max"`
+	MaxResults          int    `toml:"max_results"`
+	StartDate           string `toml:"start_date"`
+	EndDate             string `toml:"end_date"`
+	ParallelBuckets     int    `toml:"parallel_buckets"`
+	BucketMin           int    `toml:"bucket_min"`
+	BucketMax           int    `toml:"bucket_max"`
+	FileLoadParallelism int    `toml:"file_load_parallelism"`
 }
 
 type dayBucket struct {
@@ -47,7 +47,7 @@ func NewScanner(conf *Config, logStorage *logstorage.LogStorage, marker *filemar
 		logStorage:          logStorage,
 		marker:              marker,
 		filesCh:             make(chan logstorage.AwsFile, 100),
-		fileLoadParallelism: 3,
+		fileLoadParallelism: conf.FileLoadParallelism,
 		ingestCluster:       icluster,
 	}
 }
@@ -124,7 +124,21 @@ func (s *Scanner) filesToLinesAsync() chan string {
 	//read lines in several files and put them to linesCh channel for next stage
 	var fileNum int32
 	var dataSize int64
-	linesCh := make(chan string, 2000)
+	linesCh := make(chan string, 200000)
+
+	reportInterval := time.Second * 3
+	t := time.NewTicker(reportInterval)
+	go func() {
+		for {
+			l := len(linesCh)
+			log.Printf("lines channel length: %d fullness: %2.1f%%\n", l, float64(l)*100/float64(cap(linesCh)))
+			select {
+			case <-t.C:
+			case <-time.After(reportInterval * 2):
+				return
+			}
+		}
+	}()
 
 	start := time.Now()
 	var wg sync.WaitGroup
@@ -173,6 +187,8 @@ func (s *Scanner) filesToLinesAsync() chan string {
 	go func() {
 		wg.Wait()
 		close(linesCh)
+		time.Sleep(reportInterval * 4)
+		t.Stop()
 	}()
 	return linesCh
 }
